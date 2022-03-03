@@ -1,3 +1,5 @@
+// EMPROLIJAR
+
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -9,7 +11,7 @@ class Board extends JPanel {
         BLOCK_SIZE = 20,
         
         TIEMPO_ANIMACION = 200,
-        T = 30, // épsilon en los documentos
+        T = 30, // Ã©psilon en los documentos
         
         BLOQUE_VACIO = 0,
         PIEZA_T = 1,
@@ -43,7 +45,7 @@ class Board extends JPanel {
    	private final Color BOARD[][] = new Color[WIDTH][HEIGHT];
     
     private final Color COLORS[] = {
-    	Color.BLACK,	// la casilla vacía
+    	Color.BLACK,	// la casilla vacÃ­a
         Color.WHITE,	// T
         Color.BLUE,		// J
         Color.YELLOW,	// L
@@ -106,6 +108,30 @@ class Board extends JPanel {
     
     private void limpiarLineasCompletas() {
     	for (int i = 0; i < 4; i++) LINEAS_COMPLETAS[i] = VALOR_NULO_LINEA;
+    }
+
+    private boolean piezaFueraDeLimites(int[][] coords) {
+	for (int i = 0; i < 4; i++)
+		if (coords[X][i] < 0 || coords[X][i] >= WIDTH
+		||  coords[Y][i] >= HEIGHT) 
+			return true;
+
+	return false;
+    }
+
+    private boolean tocaOtraPieza(int[][] coords) {
+    	for (int i = 0; i < 4; i++)
+	    if (coords[X][i] < 0 || coords[X][i] >= WIDTH
+	    ||  coords[Y][i] < 0 || coords[Y][i] >= HEIGHT) 
+		continue;
+    	    else if (BOARD[coords[X][i]][coords[Y][i]] != Color.BLACK) return true;
+
+    	return false;
+    }
+
+    private void ejecutarSecuenciaGameOver() {
+	GAME_LOOP.stop();
+	System.out.println("Perdiste JIJIJIJA");
     }
     
     private void generarPieza() {
@@ -192,6 +218,16 @@ class Board extends JPanel {
                 
              	break;
         }
+
+	for (int i = 0; i < 4; i++)
+		if (COORDS_PIEZA_ACTUAL[Y][i] < 0) {
+			for (int j = 0; j < 4; j++)
+				COORDS_PIEZA_ACTUAL[Y][j]++;
+			i = 4;
+		}
+
+	// Cambiar por algo que verifique si toca otra pieza
+	if (tocaOtraPieza(COORDS_PIEZA_ACTUAL)) ejecutarSecuenciaGameOver();
     }
     
     private void copiarAPiezaProvisoria() {
@@ -209,8 +245,9 @@ class Board extends JPanel {
     }
     
     private boolean puedeSeguirCayendo() {
-    	for (int i = 0; i < 4; i++) {
-        	if (
+        for (int i = 0; i < 4; i++) {
+	    if (COORDS_PIEZA_ACTUAL[Y][i] < 0) continue;
+            else if (
             	COORDS_PIEZA_ACTUAL[Y][i] == HEIGHT-1
             ||	BOARD[COORDS_PIEZA_ACTUAL[X][i]][COORDS_PIEZA_ACTUAL[Y][i]+1] != Color.BLACK)
             		return false;
@@ -228,12 +265,10 @@ class Board extends JPanel {
     private void moverPiezaActual(int direccion) {
     	copiarAPiezaProvisoria();
         
-    	for (int i = 0; i < 4; i++) {
+    	for (int i = 0; i < 4; i++)
         	COORDS_PIEZA_PROVISORIA[X][i] += Math.pow(-1, direccion == MOVER_IZQUIERDA? 1 : 0);
-            if (COORDS_PIEZA_PROVISORIA[X][i] < 0 || COORDS_PIEZA_PROVISORIA[X][i] >= WIDTH
-            ||	BOARD[COORDS_PIEZA_PROVISORIA[X][i]][COORDS_PIEZA_PROVISORIA[Y][i]] != Color.BLACK)
-               	return;
-        }
+
+	if (tocaOtraPieza(COORDS_PIEZA_PROVISORIA) || piezaFueraDeLimites(COORDS_PIEZA_PROVISORIA)) return;
         
         copiarAPiezaActual();
     }
@@ -303,27 +338,26 @@ class Board extends JPanel {
     
     private void ciclo() {
     	tiempo += T;
-		if (modo_animacion) {
-			if (tiempo >= TIEMPO_ANIMACION)
-				ejecutarKeyframeSiguiente();
-                repaint();
+	if (modo_animacion) {
+		if (tiempo >= TIEMPO_ANIMACION) {
+			ejecutarKeyframeSiguiente();
+			repaint();
 		}
-		else {
+	} else {
         	procesarEntrada();
-          	if (tiempo >= tiempo_caida) {
-            	if (puedeSeguirCayendo()) 
-                	for (int i = 0; i < 4; i++)
-                    	COORDS_PIEZA_ACTUAL[Y][i]++;
-            	else {
-                	fijarPiezaActual();
-                	validarLineas();
-                	generarPieza();
-              	}
-              	repaint();
-              	tiempo = 0;
-          }
-		}        
-//		else tiempo += T;
+	        if (tiempo >= tiempo_caida) {
+			if (puedeSeguirCayendo()) 
+        	       		for (int i = 0; i < 4; i++)
+		               		COORDS_PIEZA_ACTUAL[Y][i]++;
+	            	else {
+        	       		fijarPiezaActual();
+                		validarLineas();
+	               		generarPieza();
+		       	}
+        	      	repaint();
+              		tiempo = 0;
+	        }
+	}        
     }
     
     private void rotar(boolean s_antihorario) {
@@ -420,13 +454,9 @@ class Board extends JPanel {
             // y para la pieza O ni me gasto porque no rota xd
         }
         
-	// Código para evitar rotación a través de las paredes o de otras piezas
+	// CÃ³digo para evitar rotaciÃ³n a travÃ©s de las paredes o de otras piezas
         for (int i = 0; i < 4; i++)
-        	if (COORDS_PIEZA_PROVISORIA[X][i] >= WIDTH || COORDS_PIEZA_PROVISORIA[X][i] < 0
-            ||	COORDS_PIEZA_PROVISORIA[Y][i] >= HEIGHT
-	// Pero esta parte de acá da error cuando la pieza acaba de salir porque llama a un índice negativo
-            ||	BOARD[COORDS_PIEZA_PROVISORIA[X][i]][COORDS_PIEZA_PROVISORIA[Y][i]] != Color.BLACK)
-            	return;
+        	if (tocaOtraPieza(COORDS_PIEZA_PROVISORIA) || piezaFueraDeLimites(COORDS_PIEZA_PROVISORIA)) return;
         
         copiarAPiezaActual();
     }
